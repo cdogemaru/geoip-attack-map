@@ -11,14 +11,16 @@ import maxminddb
 #import re
 import redis
 import io
-
+import geoip2.database
+import pickle as pkl
 from const import META, PORTMAP
-
+import traceback
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from os import getuid
 from sys import exit
 #from textwrap import dedent
 from time import gmtime, localtime, sleep, strftime
+import math
 
 # start the Redis server if it isn't started already.
 # $ redis-server
@@ -32,6 +34,8 @@ redis_instance = None
 syslog_path = '/var/log/syslog'
 #syslog_path = '/var/log/reverse-proxy.log'
 db_path = '../DataServerDB/GeoLite2-City.mmdb'
+asn_path= '../DataServerDB/GeoLite2-ASN.mmdb'
+asn_geo_dict_path = "../DataServerDB/ASN_GEO_DICT.pkl"
 
 # file to log data
 #log_file_out = '/var/log/map_data_server.out'
@@ -157,30 +161,182 @@ def parse_maxminddb(db_path, ip):
 # For now it is only here for testing
 
 def parse_syslog(line):
-    line = line.split()
+    line = line.strip()
+    line = line.split("^")
     data = line[-1]
-    data = data.split(',')
+    data = data.split('|')
 
-    if len(data) != 6:
+    if len(data) != 3:
         print('NOT A VALID LOG')
         return False
     else:
-        src_ip = data[0]
-        dst_ip = data[1]
-        src_port = data[2]
-        dst_port = data[3]
-        type_attack = data[4]
-        cve_attack = data[5]
-        data_dict = {
-                    'src_ip': src_ip,
-                    'dst_ip': dst_ip,
-                    'src_port': src_port,
-                    'dst_port': dst_port,
-                    'type_attack': type_attack,
-                    'cve_attack': cve_attack
-                    }
-        return data_dict
+        try:
+            a_id = data[0]
+            a = json.loads(data[1])
+            a_info = json.loads(data[2])
+        except Exception:
+            traceback.print_exc()
+            print(data)
+            return False
+        ### 
+        # 需要用的信息
+        #   type
+        #   prefix
+        #   attacker
+        #   victim 
+        #   vp_info
+        ###
 
+        prefix = a[4]
+        t = a_info["type"]
+        if t == 0:
+            victim = a_info["oldhomeas"]
+            attacker = a_info["newhomeas"]
+        elif t == 1:
+            bad_segment = a_info["bad_path_segment"].split(" ")
+            victim = bad_segment[1]
+            attacker = bad_segment[0]
+        else:
+            print('ATTACK TYPE NOT VALID')
+            return False
+
+        normal_paths = set()
+        abnormal_paths = set()
+
+        vp_info = a_info["vps"]
+        for vp in vp_info:
+            if vp["is_affected"] == 0:
+                normal_paths.add(vp["path"])
+            else:
+                abnormal_paths.add(vp["path"])
+
+        normal_paths = list(normal_paths)
+        abnormal_paths = list(abnormal_paths)
+
+        data_dict = {
+            "prefix": prefix,
+            "attacker": attacker,
+            "victim": victim,
+            "type": t,
+            "normal_paths": normal_paths,
+            "abnormal_paths": abnormal_paths
+        }
+        return data_dict 
+
+
+# ASNreader = maxminddb.open_database(asn_path)
+cityreader = maxminddb.open_database(db_path)
+f = open(asn_geo_dict_path, "rb")
+asn_geo_dict = pkl.load(f)
+
+import ipaddress
+import numpy as np
+def get_geolocation(data_dict):
+
+    global cityreader, asn_geo_dict
+    ### origin location
+    prefix = data_dict["prefix"]
+    network = ipaddress.ip_network(prefix)
+    for i in network.hosts():
+        rand = np.random.uniform(0,1)
+        if rand > 0.05:
+            rand_host = i
+            break
+
+    ### TODO: deal with empty response
+    response = cityreader.get(rand_host)
+    origin_country_name = response["registered_country"]["names"]["en"]
+    origin_country_code = response["registered_country"]["iso_code"]
+    origin_long = response["location"]["longitude"]
+    origin_lati = response["location"]["latitude"]
+
+    print(origin_country_code, origin_country_name, origin_long, origin_lati)
+
+    ### attacker location
+    locations = asn_geo_dict[data_dict["attacker"]]
+    min_dist = math.inf
+    attacker_country_code = None
+    attacker_country_name = None
+    last_node = (origin_long, origin_lati)
+    for location in locations:
+        cur_node = (location[0], location[1])
+        dist = (cur_node[0]-last_node[0])*(cur_node[0]-last_node[0]) + \
+            (cur_node[1]-last_node[1])*(cur_node[1]-last_node[1])
+        if dist < min_dist:
+            # t = cur_node
+            min_dist = dist
+            attacker_country_name = location[2]
+            attacker_country_code = location[3]
+
+
+    ### convert the AS-path to long-lati path
+    normal_paths = data_dict["normal_paths"]
+    abnormal_paths = data_dict["abnormal_paths"]
+
+    normal_path_geos = []
+    abnormal_path_geos = []
+    for path in normal_paths:
+        path = path.split(" ")
+        normal_path_geo = [(origin_long, origin_lati)]
+        t = None
+        last_node = (origin_long, origin_lati)
+        for asn in reversed(path[:-1]):
+
+            ### 如果asn_geo_dict中不存在这个AS，那么就直接跳过
+            if not asn in asn_geo_dict:
+                continue
+            min_dist = math.inf
+            locations = asn_geo_dict[asn]
+            # print(asn, locations)
+            for location in locations:
+                cur_node = (location[0], location[1])
+                dist = (cur_node[0]-last_node[0])*(cur_node[0]-last_node[0]) + \
+                    (cur_node[1]-last_node[1])*(cur_node[1]-last_node[1])
+                if dist > 0 and dist < min_dist:
+                    # print(dist, cur_node)
+                    t = cur_node
+                    min_dist = dist
+            if not t is None:
+                normal_path_geo.append(t)
+                last_node = t
+                t = None
+        normal_path_geos.append(normal_path_geo)
+
+    for path in abnormal_paths:
+        path = path.split(" ")
+        abnormal_path_geo = [(origin_long, origin_lati)]
+        t = None
+        last_node = (origin_long, origin_lati)
+        for asn in reversed(path[:-1]):
+
+            ### 如果asn_geo_dict中不存在这个AS，那么就直接跳过
+            if not asn in asn_geo_dict:
+                continue
+            min_dist = math.inf
+            locations = asn_geo_dict[asn]
+            for location in locations:
+                cur_node = (location[0], location[1])
+                dist = (cur_node[0]-last_node[0])*(cur_node[0]-last_node[0]) + \
+                    (cur_node[1]-last_node[1])*(cur_node[1]-last_node[1])
+                if dist > 0 and dist < min_dist:
+                    t = cur_node
+                    min_dist = dist
+            if not t is None:
+                abnormal_path_geo.append(t)
+                last_node = t
+                t = None
+        abnormal_path_geos.append(abnormal_path_geo)
+
+    geo_dict = {
+        "victim_country_code": origin_country_code,
+        "victim_country_name": origin_country_name,
+        "attacker_country_code": attacker_country_code,
+        "attacker_country_name": attacker_country_name,
+        "normal_path_geos": normal_path_geos,
+        "abnormal_path_geos": abnormal_path_geos
+    }    
+    # print(json.dumps(geo_dict, indent=2))
+    return geo_dict
 
 def shutdown_and_report_stats():
     print('\nSHUTTING DOWN')
@@ -297,63 +453,16 @@ def main():
             else:
                 syslog_data_dict = parse_syslog(line)
                 if syslog_data_dict:
-                    ip_db_unclean = parse_maxminddb(db_path, syslog_data_dict['src_ip'])
-                    if ip_db_unclean:
-                        event_count += 1
-                        ip_db_clean = clean_db(ip_db_unclean)
-                        
-                        msg_type = {'msg_type': get_msg_type()}
-                        msg_type2 = {'msg_type2': syslog_data_dict['type_attack']}
-                        msg_type3 = {'msg_type3': syslog_data_dict['cve_attack']}
+                    geo_dict = get_geolocation(syslog_data_dict)
 
-                        proto = {'protocol': get_tcp_udp_proto(
-                                                            syslog_data_dict['src_port'],
-                                                            syslog_data_dict['dst_port']
-                                                            )}
-                        super_dict = merge_dicts(
-                                                hq_dict,
-                                                ip_db_clean,
-                                                msg_type,
-                                                msg_type2,
-                                                msg_type3,
-                                                proto,
-                                                syslog_data_dict
-                                                )
+                    super_dict  = merge_dicts(
+                        syslog_data_dict, 
+                        geo_dict
+                    )
 
-                        # Track Stats
-                        track_stats(super_dict, continents_tracked, 'continent')
-                        track_stats(super_dict, countries_tracked, 'country')
-                        track_stats(super_dict, ips_tracked, 'src_ip')
-                        event_time = strftime("%d-%m-%Y %H:%M:%S", localtime()) # local time
-                        #event_time = strftime("%Y-%m-%d %H:%M:%S", gmtime()) # UTC time
-                        track_flags(super_dict, country_to_code, 'country', 'iso_code')
-                        track_flags(super_dict, ip_to_code, 'src_ip', 'iso_code')
+                    json_data = json.dumps(super_dict)
+                    redis_instance.publish('attack-map-production', json_data)
 
-                        # Append stats to super_dict
-                        super_dict['event_count'] = event_count
-                        super_dict['continents_tracked'] = continents_tracked
-                        super_dict['countries_tracked'] = countries_tracked
-                        super_dict['ips_tracked'] = ips_tracked
-                        super_dict['unknowns'] = unknowns
-                        super_dict['event_time'] = event_time
-                        super_dict['country_to_code'] = country_to_code
-                        super_dict['ip_to_code'] = ip_to_code
-
-                        json_data = json.dumps(super_dict)
-                        redis_instance.publish('attack-map-production', json_data)
-
-                        #if args.verbose:
-                        #    print(ip_db_unclean)
-                        #    print('------------------------')
-                        #    print(json_data)
-                        #    print('Event Count: {}'.format(event_count))
-                        #    print('------------------------')
-
-                        print('Event Count: {}'.format(event_count))
-                        print('------------------------')
-
-                    else:
-                        continue
 
 
 if __name__ == '__main__':
