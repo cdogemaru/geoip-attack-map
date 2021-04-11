@@ -9,3 +9,11 @@ get_alarm_info(self, alarm_id): 取alarm_id对应的告警的详细信息，返�
 
 其中vp_info的格式如下
 vp_info = [{'asn': asn(str格式), 'is_affected': is_affected(是否被感染，int类型，0/1), 'path': path(该vp的路径，str格式，如"3356 3549 131071")}, ...]
+
+get_alarm_info_2(self, alarm_id)大部分与get_alarm_info一致，只有一处
+不同，就是vp_info中，每个字典多了一条字段，叫做'before_path'，用来存储该vp感染前走的路径，
+还是str格式
+
+get_after_path_set(alarm_id)返回了alarm_id对应感染事件感染后所有AS的选路，
+格式与子童的那个一致，[{'asn': asn(str格式), 'is_affected': is_affected(是否被感染, int, 0/1), 'path': path(该as的选路，str格式)}]
+

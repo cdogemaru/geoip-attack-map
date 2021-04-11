@@ -163,6 +163,7 @@ def parse_maxminddb(db_path, ip):
 def parse_syslog(line):
     line = line.strip()
     line = line.split("^")
+    # print(line)
     data = line[-1]
     data = data.split('|')
 
@@ -188,6 +189,7 @@ def parse_syslog(line):
         ###
 
         prefix = a[4]
+        # prefix = None
         t = a_info["type"]
         if t == 0:
             victim = a_info["oldhomeas"]
@@ -200,20 +202,26 @@ def parse_syslog(line):
             print('ATTACK TYPE NOT VALID')
             return False
 
-        normal_paths = set()
-        abnormal_paths = set()
+        # normal_paths = set()
+        # abnormal_paths = set()
+
+        normal_paths = []
+        abnormal_paths = []
 
         vp_info = a_info["vps"]
         for vp in vp_info:
-            if vp["is_affected"] == 0:
-                normal_paths.add(vp["path"])
-            else:
-                abnormal_paths.add(vp["path"])
+            if vp["is_affected"] != 0:
+                abnormal_paths.append(vp["path"])
+                normal_paths.append(vp["before_path"])
+                # abnormal_paths.add(vp["path"])
+                # normal_paths.add(vp["before_path"])
 
-        normal_paths = list(normal_paths)
-        abnormal_paths = list(abnormal_paths)
+
+        # normal_paths = list(normal_paths)
+        # abnormal_paths = list(abnormal_paths)
 
         data_dict = {
+            "index" : data[0],
             "prefix": prefix,
             "attacker": attacker,
             "victim": victim,
@@ -229,10 +237,17 @@ cityreader = maxminddb.open_database(db_path)
 f = open(asn_geo_dict_path, "rb")
 asn_geo_dict = pkl.load(f)
 
+def dist_func(p1, p2):
+    t = 0
+    t += (p1[0] - p2[0]) * (p1[0] - p2[0])
+    t += (p1[1] - p2[1]) * (p1[1] - p2[1])
+    t = math.sqrt(t)
+    return t
+
 import ipaddress
 import numpy as np
 def get_geolocation(data_dict):
-
+    thresh = 10
     global cityreader, asn_geo_dict
     ### origin location
     prefix = data_dict["prefix"]
@@ -250,24 +265,38 @@ def get_geolocation(data_dict):
     origin_long = response["location"]["longitude"]
     origin_lati = response["location"]["latitude"]
 
-    print(origin_country_code, origin_country_name, origin_long, origin_lati)
 
     ### attacker location
+    if not data_dict["attacker"] in asn_geo_dict:
+        print("Can't locate the attacker.")
+        return None
     locations = asn_geo_dict[data_dict["attacker"]]
-    min_dist = math.inf
+    max_dist = 0
     attacker_country_code = None
     attacker_country_name = None
+    attacker_long = None
+    attacker_lati = None
     last_node = (origin_long, origin_lati)
     for location in locations:
         cur_node = (location[0], location[1])
         dist = (cur_node[0]-last_node[0])*(cur_node[0]-last_node[0]) + \
             (cur_node[1]-last_node[1])*(cur_node[1]-last_node[1])
-        if dist < min_dist:
-            # t = cur_node
-            min_dist = dist
+        if dist > max_dist:
+            max_dist = dist
+            attacker_long = location[0]
+            attacker_lati = location[1]
             attacker_country_name = location[2]
             attacker_country_code = location[3]
 
+    if attacker_long is None or dist_func((attacker_long, attacker_lati), (origin_long, origin_lati)) < thresh:
+        print("Attacker too near to victim.")
+        return None
+
+    victim_node = (origin_long, origin_lati)
+    attacker_node = (attacker_long, attacker_lati)
+
+    print(data_dict["victim"], origin_country_code, origin_country_name, origin_long, origin_lati, 
+        data_dict["attacker"], attacker_long, attacker_lati)
 
     ### convert the AS-path to long-lati path
     normal_paths = data_dict["normal_paths"]
@@ -275,57 +304,88 @@ def get_geolocation(data_dict):
 
     normal_path_geos = []
     abnormal_path_geos = []
-    for path in normal_paths:
-        path = path.split(" ")
-        normal_path_geo = [(origin_long, origin_lati)]
-        t = None
-        last_node = (origin_long, origin_lati)
-        for asn in reversed(path[:-1]):
 
+    for normal_path, abnormal_path in zip(normal_paths, abnormal_paths):
+        ### path: from attacker/victim to vantage point
+        normal_path = list(reversed(normal_path.split(" ")))
+        abnormal_path = list(reversed(abnormal_path.split(" ")))
+        ### path hijacking
+        if data_dict["type"] == 1:
+            abnormal_path = abnormal_path[1:]
+        attacker = data_dict["attacker"]
+        victim = data_dict["victim"]
+        if (normal_path[-1] != abnormal_path[-1]):
+            print("The vantage points of the normal_path and abnormal_path are different")
+            continue
+        vp = normal_path[-1]
+        if (vp not in asn_geo_dict):
+            print("VP not in asn_geo_dict")
+            continue
+        max_dist = 0
+        ### deciding vp location
+        vp_node = None
+        locations = asn_geo_dict[vp]
+        for location in locations:
+            cur_node = (location[0], location[1])
+            d = dist_func(cur_node, victim_node) + dist_func(cur_node, attacker_node)
+            if d > max_dist:
+                vp_node = cur_node
+                max_dist = d
+        if dist_func(vp_node, victim_node) < thresh or dist_func(vp_node, victim_node) < thresh:
+            print("VP is too near to the attacker/victim.")
+            continue
+        ### deciding remaining as locations in normal_path
+        normal_path_geo = [(origin_long, origin_lati)]
+        last_node = (origin_long, origin_lati)
+        t = None
+        for asn in normal_path[1:-1]:
             ### 如果asn_geo_dict中不存在这个AS，那么就直接跳过
             if not asn in asn_geo_dict:
                 continue
-            min_dist = math.inf
-            locations = asn_geo_dict[asn]
+            min_dist=math.inf
+            locations=asn_geo_dict[asn]
             # print(asn, locations)
             for location in locations:
-                cur_node = (location[0], location[1])
-                dist = (cur_node[0]-last_node[0])*(cur_node[0]-last_node[0]) + \
-                    (cur_node[1]-last_node[1])*(cur_node[1]-last_node[1])
+                cur_node=(location[0], location[1])
+                dist= dist_func(cur_node, last_node)
                 if dist > 0 and dist < min_dist:
-                    # print(dist, cur_node)
-                    t = cur_node
+                    t=cur_node
                     min_dist = dist
             if not t is None:
                 normal_path_geo.append(t)
-                last_node = t
-                t = None
+                last_node=t
+                t=None
+        normal_path_geo.append(vp_node)
         normal_path_geos.append(normal_path_geo)
 
-    for path in abnormal_paths:
-        path = path.split(" ")
-        abnormal_path_geo = [(origin_long, origin_lati)]
+        ### deciding remaining as locations in abnormal_path
+        abnormal_path_geo = [(attacker_long, attacker_lati)]
+        last_node = (attacker_long, attacker_lati)
         t = None
-        last_node = (origin_long, origin_lati)
-        for asn in reversed(path[:-1]):
-
+        for asn in abnormal_path[1:-1]:
             ### 如果asn_geo_dict中不存在这个AS，那么就直接跳过
             if not asn in asn_geo_dict:
                 continue
             min_dist = math.inf
-            locations = asn_geo_dict[asn]
+            locations=asn_geo_dict[asn]
             for location in locations:
-                cur_node = (location[0], location[1])
-                dist = (cur_node[0]-last_node[0])*(cur_node[0]-last_node[0]) + \
-                    (cur_node[1]-last_node[1])*(cur_node[1]-last_node[1])
+                cur_node=(location[0], location[1])
+                dist=dist_func(cur_node, last_node)
                 if dist > 0 and dist < min_dist:
-                    t = cur_node
+                    t=cur_node
                     min_dist = dist
             if not t is None:
                 abnormal_path_geo.append(t)
-                last_node = t
-                t = None
+                last_node=t
+                t=None
+        abnormal_path_geo.append(vp_node)
         abnormal_path_geos.append(abnormal_path_geo)
+        
+        ### choose the paths to show
+        if len(abnormal_path_geos) > 3:
+            abnormal_path_geos = abnormal_path_geos[:3]
+        if len(normal_path_geos) > 3:
+            normal_path_geos = normal_path_geos[:3]
 
     geo_dict = {
         "victim_country_code": origin_country_code,
@@ -335,7 +395,6 @@ def get_geolocation(data_dict):
         "normal_path_geos": normal_path_geos,
         "abnormal_path_geos": abnormal_path_geos
     }    
-    # print(json.dumps(geo_dict, indent=2))
     return geo_dict
 
 def shutdown_and_report_stats():
@@ -441,6 +500,8 @@ def main():
     # Find HQ lat/long
     hq_dict = find_hq_lat_long(hq_ip)
 
+    available_indexs = set()
+
     # Follow/parse/format/publish syslog data
     with io.open(syslog_path, "r", encoding='ISO-8859-1') as syslog_file:
         syslog_file.readlines()
@@ -454,14 +515,21 @@ def main():
                 syslog_data_dict = parse_syslog(line)
                 if syslog_data_dict:
                     geo_dict = get_geolocation(syslog_data_dict)
-
+                    if geo_dict is None:
+                        continue
+                    if len(geo_dict["normal_path_geos"]) == 0:
+                        continue
                     super_dict  = merge_dicts(
                         syslog_data_dict, 
                         geo_dict
                     )
-
                     json_data = json.dumps(super_dict)
                     redis_instance.publish('attack-map-production', json_data)
+
+                    available_indexs.add(syslog_data_dict["index"])
+                    with open("./avalaible_indexs.txt", "w") as f:
+                        print(available_indexs)
+                        f.write(str(list(available_indexs)))
 
 
 

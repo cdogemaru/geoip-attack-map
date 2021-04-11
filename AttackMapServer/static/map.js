@@ -4,6 +4,7 @@
 // - AttackMapServer machine:
 //   - Internal IP: 127.0.0.1
 //   - External IP: 192.168.11.106
+// var webSock = new WebSocket("ws:/192.168.1.137:8888/websocket"); // Internal
 var webSock = new WebSocket("ws:/166.111.68.233:43241/websocket"); // Internal
 
 L.mapbox.accessToken = 'pk.eyJ1IjoiY2RvZ2VtYXJ1IiwiYSI6ImNrbXc2a29veDBieXoydnFudnAwcHd2NWQifQ.p7fS86vrdu0OY5bS-xLocw';
@@ -11,6 +12,13 @@ var map = L.mapbox.map("map", "mapbox.dark", {
     center: [0, 0], // lat, long
     zoom: 2,
     zoomControl: false
+});
+
+$(function () {
+    $("#content-1").mCustomScrollbar({
+        theme: "rounded-dots-dark"
+    });
+
 });
 
 // add full screen option
@@ -75,7 +83,7 @@ function calcMidpoint(x1, y1, x2, y2, bend) {
     var tmpy = (y1 + y2) / 2;
     var dx = y2 - y1;
     var dy = x1 - x2;
-    var r = Math.random() / 2 + 0.05;
+    var r = Math.random() / 6 + 0.05;
     var a = tmpx + r * dx;
     var b = tmpy + r * dy;
     return {"x":a, "y":b};
@@ -151,7 +159,7 @@ function prependTypeRow(id, args) {
 
 function prependCVERow(id, args) {
     var tr = document.createElement('tr');
-    tr.setAttribute("style", "height:32px;")
+    // tr.setAttribute("style", "height:32px;");
     //count = args.length;
     count = 1;
 
@@ -237,6 +245,39 @@ function prependCVERow(id, args) {
     if (rowCount >= 50) {
         element.deleteRow(rowCount -1);
     }
+
+    element.insertBefore(tr, element.firstChild);
+}
+
+function prependtest(id, args) {
+    var tr = document.createElement('tr');
+    // tr.setAttribute("style", "height:32px;");
+    //count = args.length;
+    count = 1;
+
+    for (var i = 0; i < count; i++) {
+        var td1 = document.createElement('td');
+        var td2 = document.createElement('td');
+        var path = "statics/attacker.svg";
+        var img = document.createElement('img');
+        img.src = path;
+        td1.appendChild(img);
+        tr.appendChild(td1);
+
+        var textNode2 = document.createTextNode("Attacker");
+        td2.appendChild(textNode2);
+        tr.appendChild(td2);
+
+
+    }
+
+    var element = document.getElementById(id);
+    var rowCount = element.rows.length;
+
+    // // Only allow 50 rows
+    // if (rowCount >= 50) {
+    //     element.deleteRow(rowCount - 1);
+    // }
 
     element.insertBefore(tr, element.firstChild);
 }
@@ -387,6 +428,7 @@ function handleLegendType(msg) {
     if (attackCve[1] != "___"){                
         prependCVERow('attack-cveresp', attackCve);
     }
+    prependtest("attack-legend", None);
 }
 
 // WEBSOCKET STUFF
@@ -462,18 +504,15 @@ function transitionNext(i, _index, msg, is_abnormal) {
 
     var circleRadius = 6
 
-    // Circle follows the line
-    var dot = svg.append('circle')
-        // .data({ "long": path[_index + 1][0], "lati": path[_index + 1][1] })
-        .attr('r', 3)
-        .attr('fill', color)
-        .transition()
-        // .delay(delay)
-        .duration(600)
-        .ease(d3.easeSin)
-        .attrTween('transform', translateAlong(lineGraph.node()));
-
-    // console.log(dot.data);
+    // // Circle follows the line
+    // var dot = svg.append('circle')
+    //     // .data({ "long": path[_index + 1][0], "lati": path[_index + 1][1] })
+    //     .attr('r', 3)
+    //     .attr('fill', color)
+    //     .transition()
+    //         .duration(600)
+    //         .ease(d3.easeSin)
+    //         .attrTween('transform', translateAlong(lineGraph.node()));
 
     var length = lineGraph.node().getTotalLength();
     lineGraph.attr('stroke-dasharray', length + ' ' + length)
@@ -486,6 +525,8 @@ function transitionNext(i, _index, msg, is_abnormal) {
                 _index = _index + 1;
                 transitionNext(i, _index, msg, is_abnormal);
             });
+
+
 }
 
 var circles = new L.LayerGroup();
@@ -508,6 +549,531 @@ function addCircle(color, fillcolor, srcLatLng) {
     }).addTo(circles);
 }
 
+
+var markers = [];
+
+function handleAbnormalPaths(msg) {
+
+    var path_num = Math.min(msg.abnormal_path_geos.length, 3);
+
+    var end_node_edges = [];
+    var lineGraphs = [];
+    var dots = [];
+
+    var end_r_low = 4;
+    var mid_r = 2;
+    var end_r_up = 12;
+    var dur = 1000;
+    var color = "#ff0000";
+    var vp_color = "#ffcc29";
+    var cnt = 0;
+
+    var yratio = 0.6;
+    var xratio = 2;
+
+
+    var eyeicon = L.icon({
+        iconUrl: '/static/eye.svg',
+        // iconUrl: '/static/eye.svg',
+        iconSize: [36, 36], // size of the icon
+        iconAnchor: [18, 38], // point of the icon which will correspond to marker's location
+    });
+    var attackericon = L.icon({
+        iconUrl: '/static/attacker.svg',
+        iconSize: [38, 35], // size of the icon
+        iconAnchor: [19, 45], // point of the icon which will correspond to marker's location
+    });
+
+    var myIcon = L.divIcon({ className: 'my-div-icon' });
+    // you can set .my-div-icon styles in CSS
+    var popupContent = "test";
+    for (var i = 0; i < path_num; i++) {
+        var path = msg.abnormal_path_geos[i];
+        var attacker = path[0];
+        var attackergeo = new L.LatLng(attacker[1], attacker[0]);
+        var a = L.marker(attackergeo, {
+            title: "Attacker",
+            icon: attackericon,
+            // new L.DivIcon({
+            //     className: 'my-div-icon',
+            //     html: '<img class="my-div-image" src="/static/attacker.svg"/>' +
+            //         '<span class="my-div-span">RAF Banff Airfield</span>'
+            // })
+            opacity: 1
+        }).addTo(map).bindPopup(popupContent);;
+
+        var vp = path[path.length - 1];
+        var vpgeo = new L.LatLng(vp[1], vp[0]);
+        var b = L.marker(vpgeo, {
+            title: "Vantage Point",
+            icon: eyeicon,
+            opacity: 1
+        }).addTo(map);
+
+        markers.push(a);
+        markers.push(b);
+
+    }
+
+    for (var i = 0; i < path_num; i++) {
+        var path = msg.abnormal_path_geos[i];
+        for (var j = 0; j < path.length - 1; j++) {
+            var last_node = path[j];
+            var cur_node = path[j + 1];
+
+
+            var lastgeo = new L.LatLng(last_node[1], last_node[0]);
+            var curgeo = new L.LatLng(cur_node[1], cur_node[0]);
+
+            var lastpoint = map.latLngToLayerPoint(lastgeo);
+            var curpoint = map.latLngToLayerPoint(curgeo);
+
+
+            var toX = lastpoint['x'];
+            var toY = lastpoint['y'];
+            var fromX = curpoint['x'];
+            var fromY = curpoint['y'];
+
+
+
+            var bend = 0;
+
+            var lineData = [curpoint, calcMidpoint(fromX, fromY, toX, toY, bend), lastpoint];
+            var lineFunction = d3.line()
+                .curve(d3.curveBasis)
+                .x(function (d) { return d.x; })
+                .y(function (d) { return d.y; });
+
+            var lineGraph = svg.append('path')
+                .attr('d', lineFunction(lineData))
+                .attr('opacity', 1e-6)
+                .attr('stroke', color)
+                .attr('stroke-width', 2)
+                .attr('fill', 'none');
+
+            var dot = svg.append('circle')
+            lineGraphs.push(lineGraph);
+            dots.push(dot);
+
+            if (translateAlong(lineGraph.node()) === 'ERROR') {
+                console.log('translateAlong ERROR')
+                return;
+            }
+
+            var length = lineGraph.node().getTotalLength();
+            lineGraph.attr('stroke-dasharray', length + ' ' + length)
+                .attr('stroke-dashoffset', 0)
+                .transition()
+                .duration(dur)
+                .attr('opacity', 0.8);
+
+            if (j == path.length - 2) {
+
+                var x = curpoint['x'];
+                var y = curpoint['y'];
+                var end_node_edge = svg.append('ellipse')
+                    .attr('cx', x)
+                    .attr('cy', y)
+                    // .attr('r', end_r_low)
+                    .attr('rx', xratio * end_r_low)
+                    .attr('ry', yratio * end_r_low)
+                    .style('fill', 'none')
+                    .style('stroke', vp_color);
+
+                end_node_edges.push(end_node_edge);
+
+                var end_node = svg.append('ellipse')
+                    .attr('cx', x)
+                    .attr('cy', y)
+                    // .attr('r', end_r_low)
+                    .attr('rx', xratio * end_r_low)
+                    .attr('ry', yratio * end_r_low)
+                    .style('fill', vp_color)
+                    .style('stroke', vp_color)
+                    .style('stroke-opacity', 1e-6)
+                    .transition()
+                    .duration(dur)
+                    .ease(Math.sqrt)
+                    .style('stroke-opacity', 1);
+
+
+                if (i == path_num - 1) {
+                    end_node.on("end", function () {
+                        console.log(lineGraphs);
+                        for (var k = 0; k < end_node_edges.length; k++) {
+                            end_node_edges[k]
+                                .style('stroke-opacity', 1)
+                                .attr('rx', xratio * end_r_low)
+                                .attr('ry', yratio * end_r_low)
+                                // .attr('r', end_r_low)
+                                .transition()
+                                .duration(dur)
+                                .ease(Math.sqrt)
+                                .style('stroke-opacity', 1e-6)
+                                .on('end', function repeat_end_node() {
+                                    d3.select(this)
+                                        .style('stroke-opacity', 1)
+                                        // .attr('r', end_r_low)
+                                        .attr('rx', xratio * end_r_low)
+                                        .attr('ry', yratio * end_r_low)
+                                        .transition()
+                                        .duration(dur)
+                                        .ease(Math.sqrt)
+                                        // .attr('r', end_r_up)
+                                        .attr('rx', xratio * end_r_up)
+                                        .attr('ry', yratio * end_r_up)
+                                        .style('stroke-opacity', 1e-6)
+                                        .on('end', repeat_end_node);
+                                });
+                        }
+                        for (var k = 0; k < dots.length; k++) {
+                            for (var t = 0; t < 6; t++) {
+                                dots[k]
+                                    .attr('r', 3)
+                                    .attr('fill', color)
+                                    .transition()
+                                    .duration(dur)
+                                    .delay(dur * t)
+                                    .ease(d3.easeSin)
+                                    .attrTween('transform', translateAlong(lineGraphs[k].node()));
+                                // .on('end', repeat_line(k));
+                            }
+                        }
+                    })
+                }
+            }
+            else {
+                if (j == 0) {
+
+
+                    var x = lastpoint['x'];
+                    var y = lastpoint['y'];
+                    var init_node_edge = svg.append('ellipse')
+                        .attr('cx', x)
+                        .attr('cy', y)
+                        .attr('rx', xratio * end_r_low)
+                        .attr('ry', yratio * end_r_low)
+                        .style('fill', 'none')
+                        .style('stroke', color);
+                    // var init_node_edge = svg.append('circle')
+                    //     .attr('cx', x)
+                    //     .attr('cy', y)
+                    //     .attr('r', end_r_low)
+                    //     .style('fill', 'none')
+                    //     .style('stroke', color);
+
+                    var init_node = svg.append('ellipse')
+                        .attr('cx', x)
+                        .attr('cy', y)
+                        .attr('rx', xratio * end_r_low)
+                        .attr('ry', yratio * end_r_low)
+                        // .attr('r', end_r_low)
+                        .style('fill', color)
+                        .style('stroke', color)
+                        .style('stroke-opacity', 1e-6)
+                        .transition()
+                        .duration(dur)
+                        .ease(Math.sqrt)
+                        .style('stroke-opacity', 1e-6)
+                        .on("end", function repeat_init_node() {
+                            init_node_edge
+                                .style('stroke-opacity', 1)
+                                .attr('rx', xratio * end_r_low)
+                                .attr('ry', yratio * end_r_low)
+                                // .attr('r', end_r_low)
+                                .transition()
+                                .duration(dur)
+                                .ease(Math.sqrt)
+                                // .attr('r', end_r_up)
+                                .attr('rx', xratio * end_r_up)
+                                .attr('ry', yratio * end_r_up)
+                                .style('stroke-opacity', 1e-6)
+                                .on('end', repeat_init_node);
+                        });
+                }
+                var x = curpoint['x'];
+                var y = curpoint['y'];
+                svg.append('ellipse')
+                    .attr('cx', x)
+                    .attr('cy', y)
+                    // .attr('r', mid_r)
+
+                    .attr('rx', xratio * mid_r)
+                    .attr('ry', yratio * mid_r)
+                    .style('fill', color)
+                    .style('stroke', color)
+                    .style('stroke-opacity', 1e-6)
+                    .transition()
+                    .duration(dur)
+                    .ease(Math.sqrt)
+                    .style('stroke-opacity', 1);
+            }
+        }
+    }
+}
+
+
+function handleNormalPaths(msg) {
+
+    var path_num = Math.min(msg.normal_path_geos.length, 3);
+
+    var end_node_edges = [];
+    var lineGraphs = [];
+    var dots = [];
+
+    var end_r_low = 4;
+    var mid_r = 2;
+    var end_r_up = 12;
+    var dur = 1000;
+    var color = "#81b214";
+    var vp_color = "#ffcc29";
+    var cnt = 0;
+
+    var yratio = 0.6;
+    var xratio = 2;
+
+
+    var eyeicon = L.icon({
+        iconUrl: '/static/eye.svg',
+        // iconUrl: '/static/eye.svg',
+        iconSize: [36, 36], // size of the icon
+        iconAnchor: [18, 38], // point of the icon which will correspond to marker's location
+    });
+    var victimicon = L.icon({
+        iconUrl: '/static/target.svg',
+        iconSize: [38, 35], // size of the icon
+        iconAnchor: [19, 45], // point of the icon which will correspond to marker's location
+    });
+
+    var myIcon = L.divIcon({ className: 'my-div-icon' });
+    // you can set .my-div-icon styles in CSS
+    var popupContent = "test";
+    for (var i = 0; i < path_num; i++) {
+        var path = msg.normal_path_geos[i];
+        var attacker = path[0];
+        var attackergeo = new L.LatLng(attacker[1], attacker[0]);
+        var a = L.marker(attackergeo, {
+            title: "Attacker",
+            icon: victimicon,
+            // new L.DivIcon({
+            //     className: 'my-div-icon',
+            //     html: '<img class="my-div-image" src="/static/attacker.svg"/>' +
+            //         '<span class="my-div-span">RAF Banff Airfield</span>'
+            // })
+            opacity: 1
+        }).addTo(map).bindPopup(popupContent);
+        // var a = L.marker(attackergeo).addTo(map).bindPopup(popupContent);
+
+        var vp = path[path.length - 1];
+        var vpgeo = new L.LatLng(vp[1], vp[0]);
+        var b = L.marker(vpgeo, {
+            title: "Vantage Point",
+            icon: eyeicon,
+            opacity: 1
+        }).addTo(map);
+
+        markers.push(a);
+        markers.push(b);
+
+    }
+
+    for (var i = 0; i < path_num; i++) {
+        var path = msg.normal_path_geos[i];
+        for (var j = 0; j < path.length - 1; j++) {
+            var last_node = path[j];
+            var cur_node = path[j + 1];
+
+
+            var lastgeo = new L.LatLng(last_node[1], last_node[0]);
+            var curgeo = new L.LatLng(cur_node[1], cur_node[0]);
+
+            var lastpoint = map.latLngToLayerPoint(lastgeo);
+            var curpoint = map.latLngToLayerPoint(curgeo);
+
+
+            var toX = lastpoint['x'];
+            var toY = lastpoint['y'];
+            var fromX = curpoint['x'];
+            var fromY = curpoint['y'];
+
+
+
+            var bend = 0;
+
+            var lineData = [curpoint, calcMidpoint(fromX, fromY, toX, toY, bend), lastpoint];
+            var lineFunction = d3.line()
+                .curve(d3.curveBasis)
+                .x(function (d) { return d.x; })
+                .y(function (d) { return d.y; });
+
+            var lineGraph = svg.append('path')
+                .attr('d', lineFunction(lineData))
+                .attr('opacity', 1e-6)
+                .attr('stroke', color)
+                .attr('stroke-width', 2)
+                .attr('fill', 'none');
+
+            var dot = svg.append('circle')
+            lineGraphs.push(lineGraph);
+            dots.push(dot);
+
+            if (translateAlong(lineGraph.node()) === 'ERROR') {
+                console.log('translateAlong ERROR')
+                return;
+            }
+
+            var length = lineGraph.node().getTotalLength();
+            lineGraph.attr('stroke-dasharray', length + ' ' + length)
+                .attr('stroke-dashoffset', 0)
+                .transition()
+                .duration(dur)
+                .attr('opacity', 0.8);
+
+            if (j == path.length - 2) {
+
+                var x = curpoint['x'];
+                var y = curpoint['y'];
+                var end_node_edge = svg.append('ellipse')
+                    .attr('cx', x)
+                    .attr('cy', y)
+                    // .attr('r', end_r_low)
+                    .attr('rx', xratio * end_r_low)
+                    .attr('ry', yratio * end_r_low)
+                    .style('fill', 'none')
+                    .style('stroke', vp_color);
+
+                end_node_edges.push(end_node_edge);
+
+                var end_node = svg.append('ellipse')
+                    .attr('cx', x)
+                    .attr('cy', y)
+                    // .attr('r', end_r_low)
+                    .attr('rx', xratio * end_r_low)
+                    .attr('ry', yratio * end_r_low)
+                    .style('fill', vp_color)
+                    .style('stroke', vp_color)
+                    .style('stroke-opacity', 1e-6)
+                    .transition()
+                    .duration(dur)
+                    .ease(Math.sqrt)
+                    .style('stroke-opacity', 1);
+
+
+                if (i == path_num - 1) {
+                    end_node.on("end", function () {
+                        console.log(lineGraphs);
+                        for (var k = 0; k < end_node_edges.length; k++) {
+                            end_node_edges[k]
+                                .style('stroke-opacity', 1)
+                                .attr('rx', xratio * end_r_low)
+                                .attr('ry', yratio * end_r_low)
+                                // .attr('r', end_r_low)
+                                .transition()
+                                .duration(dur)
+                                .ease(Math.sqrt)
+                                .style('stroke-opacity', 1e-6)
+                                .on('end', function repeat_end_node() {
+                                    d3.select(this)
+                                        .style('stroke-opacity', 1)
+                                        // .attr('r', end_r_low)
+                                        .attr('rx', xratio * end_r_low)
+                                        .attr('ry', yratio * end_r_low)
+                                        .transition()
+                                        .duration(dur)
+                                        .ease(Math.sqrt)
+                                        // .attr('r', end_r_up)
+                                        .attr('rx', xratio * end_r_up)
+                                        .attr('ry', yratio * end_r_up)
+                                        .style('stroke-opacity', 1e-6)
+                                        .on('end', repeat_end_node);
+                                });
+                        }
+                        for (var k = 0; k < dots.length; k++) {
+                            for (var t = 0; t < 6; t++) {
+                                dots[k]
+                                    .attr('r', 3)
+                                    .attr('fill', color)
+                                    .transition()
+                                    .duration(dur)
+                                    .delay(dur * t)
+                                    .ease(d3.easeSin)
+                                    .attrTween('transform', translateAlong(lineGraphs[k].node()));
+                                // .on('end', repeat_line(k));
+                            }
+                        }
+                    })
+                }
+            }
+            else {
+                if (j == 0) {
+
+
+                    var x = lastpoint['x'];
+                    var y = lastpoint['y'];
+                    var init_node_edge = svg.append('ellipse')
+                        .attr('cx', x)
+                        .attr('cy', y)
+                        .attr('rx', xratio * end_r_low)
+                        .attr('ry', yratio * end_r_low)
+                        .style('fill', 'none')
+                        .style('stroke', color);
+                    // var init_node_edge = svg.append('circle')
+                    //     .attr('cx', x)
+                    //     .attr('cy', y)
+                    //     .attr('r', end_r_low)
+                    //     .style('fill', 'none')
+                    //     .style('stroke', color);
+
+                    var init_node = svg.append('ellipse')
+                        .attr('cx', x)
+                        .attr('cy', y)
+                        .attr('rx', xratio * end_r_low)
+                        .attr('ry', yratio * end_r_low)
+                        // .attr('r', end_r_low)
+                        .style('fill', color)
+                        .style('stroke', color)
+                        .style('stroke-opacity', 1e-6)
+                        .transition()
+                        .duration(dur)
+                        .ease(Math.sqrt)
+                        .style('stroke-opacity', 1e-6)
+                        .on("end", function repeat_init_node() {
+                            init_node_edge
+                                .style('stroke-opacity', 1)
+                                .attr('rx', xratio * end_r_low)
+                                .attr('ry', yratio * end_r_low)
+                                // .attr('r', end_r_low)
+                                .transition()
+                                .duration(dur)
+                                .ease(Math.sqrt)
+                                // .attr('r', end_r_up)
+                                .attr('rx', xratio * end_r_up)
+                                .attr('ry', yratio * end_r_up)
+                                .style('stroke-opacity', 1e-6)
+                                .on('end', repeat_init_node);
+                        });
+                }
+                var x = curpoint['x'];
+                var y = curpoint['y'];
+                svg.append('ellipse')
+                    .attr('cx', x)
+                    .attr('cy', y)
+                    // .attr('r', mid_r)
+
+                    .attr('rx', xratio * mid_r)
+                    .attr('ry', yratio * mid_r)
+                    .style('fill', color)
+                    .style('stroke', color)
+                    .style('stroke-opacity', 1e-6)
+                    .transition()
+                    .duration(dur)
+                    .ease(Math.sqrt)
+                    .style('stroke-opacity', 1);
+            }
+        }
+    }
+}
+
 webSock.onmessage = function (e) {
     console.log("Got a websocket message...");
     try {
@@ -527,28 +1093,42 @@ webSock.onmessage = function (e) {
         // }
 
         // var hqPoint = map.latLngToLayerPoint(hqLatLng);
-        for (var i = 0; i < msg.abnormal_path_geos.length; i++) {
-            transitionNext(i, 0, msg, true);
-        }
+        // for (var i = 0; i < msg.abnormal_path_geos.length; i++) {
+        //     transitionNext(i, 0, msg, true);
+        // }
         // for (var i = 0; i < msg.normal_path_geos.length; i++) {
         //     transitionNext(i, 0, msg, false);
         // }
+
+        handleAbnormalPaths(msg);
+        handleNormalPaths(msg);
+
+
+
+
         setTimeout(function () {
-            svg.selectAll("path")
+            svg.selectAll("*")
                 .transition()
                 .duration(1000)
-                // .attr('r', circleRadius * 2.5)
                 .style('opacity', 0)
                 .remove();
-            svg.selectAll("circle")
-                .transition()
-                .duration(1000)
-                // .attr('r', circleRadius * 2.5)
-                .style('opacity', 0)
-                .remove();
+
+            svg.selectAll("*").remove();
+
+            for(var i = 0; i < markers.length; i ++) {
+                map.removeLayer(markers[i]);
+            }
+            // svg.selectAll("path")
+            //     .transition()
+            //     .duration(1000)
+            //     // .attr('r', circleRadius * 2.5)
+            //     .style('opacity', 0)
+            //     .remove();
+            // svg.selectAll("circle")
         }, 7000);
 
         handleLegendType(msg);
+        handle
     } catch(err) {
         console.log(err)
     }

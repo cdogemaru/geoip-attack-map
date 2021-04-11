@@ -9,5 +9,11 @@ AttackMapServer/dump.rdb
 DataServerDB/GeoLite2-City.mmdb
 DataServerDB/GeoLite2-City.mmdb.gz
 DataServer/__pycache__/
+DataServer/*.txt
+DataServer/*.model
+DataServer/argus_show_old/
+DataServer/result/
+DataServer/AS2country.json
+
 
 AttackMapServer/static/flags/*

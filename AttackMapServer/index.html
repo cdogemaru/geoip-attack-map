@@ -19,6 +19,10 @@
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
         
         <!--CSS LINKS-->
+        <script src="https://cdn.jsdelivr.net/jquery.mcustomscrollbar/3.0.6/jquery.mCustomScrollbar.concat.min.js"></script>
+        <link href='https://cdn.jsdelivr.net/jquery.mcustomscrollbar/3.0.6/jquery.mCustomScrollbar.min.css' rel='stylesheet' />
+
+        <!-- //cdn.jsdelivr.net/jquery.mcustomscrollbar/3.0.6/mCSB_buttons.png -->
         
 
         <link href='https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.css' rel='stylesheet' />
@@ -36,24 +40,96 @@
 
     <div id="map"></div>
     <div id='informIP'></div>
- 
+        <div class='container-top col-md-2'>
+            <div class='row'>
+                <!-- <div class="col-md-2"> -->
+                    <div class="card mb-4">
+                        <div class="card-body p-5">
+                            <h4 class="mb-4">Dark dots</h4>
+                            <div id="content-1" class="custom-scrollbar-js p-2">
+                                <p class="font-italic">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Dolores,
+                                    soluta,
+                                    cupiditate. Ad ab, delectus impedit similique voluptate fuga nemo iure, nobis dolorem dolor,
+                                    quia
+                                    voluptas aperiam doloremque commodi id? In? Lorem ipsum dolor sit amet, consectetur
+                                    adipisicing elit,
+                                    sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                                    quis nostrud
+                                    exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor
+                                    in
+                                    reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+                                    occaecat
+                                    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem
+                                    ipsum dolor
+                                    sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
+                                    magna
+                                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+                                    ex ea commodo
+                                    consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
+                                    fugiat nulla
+                                    pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+                                    mollit anim
+                                    id est laborum.</p>
+                            </div>
+                        </div>
+                    </div>
+                <!-- </div> -->
+            </div>
+        </div>
+
 
 
 
 
         <div class='container-fluid'>
             <div class='row'>
+                <div class="col-md-2">
+                    <div class="card mb-4">
+                        <div class="card-body p-5">
 
-                <div class='col-md-12'>
-                    <table class='table table-condensed' id='type-attacks-table'>
+                            <table class="table table-dark" id='legend-table'>
+                                <!-- <table class='table table-condensed' id='type-attacks-table'> -->
+                                <thead>
+                                    <tr>
+                                        <th style='width:50%;'>Symbol</th>
+                                        <th style='width:50%;'>Meaning</th>
+                                    </tr>
+                                </thead>
+                                <tbody id='attack-legend'>
+                                    <!--APPEND TABLE ROWS HERE-->
+                                </tbody>
+                            </table>
+                            <!--close live-attacks-table-->
+                            <!-- <h4 class="mb-4">Dark dots</h4>
+                            <div id="content-1" class="custom-scrollbar-js p-2">
+                                <p class="font-italic">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Dolores, soluta,
+                                    cupiditate. Ad ab, delectus impedit similique voluptate fuga nemo iure, nobis dolorem dolor, quia
+                                    voluptas aperiam doloremque commodi id? In? Lorem ipsum dolor sit amet, consectetur adipisicing elit,
+                                    sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+                                    exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in
+                                    reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+                                    cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor
+                                    sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna
+                                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+                                    consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+                                    pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim
+                                    id est laborum.</p>
+                            </div> -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="event-table" class='col-md-10 mCustomScrollbar' data-mcs-theme="dark">
+                    <table class="table table-dark" id='type-attacks-table'>
+                    <!-- <table class='table table-condensed' id='type-attacks-table'> -->
                         <thead>
                             <tr>
                                 <th style='width:20%;'>Timestamp</th>
                                 <th style='width:20%;'>Attack Type</th>
                                 <th style='width:1%;'></th>
-                                <th style='width:19%;'>Victim Loc</th>
-                                <th style='width:1%;'></th>
                                 <th style='width:19%;'>Attacker Loc</th>
+                                <th style='width:1%;'></th>
+                                <th style='width:19%;'>Victim Loc</th>
                                 <th style='width:20%;'>Hijacked Prefix</th>
                             </tr>
                         </thead>
@@ -64,9 +140,6 @@
                 </div>
             </div>
         </div>
-
-
-
     <script src="/static/map.js"></script>
     
     </body>
