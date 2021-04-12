@@ -160,6 +160,42 @@ function prependTypeRow(id, args) {
 
 function prependCVERow(id, args) {
     var tr = document.createElement('tr');
+    /**
+        author: maq18
+        date: 2021.4.12
+        content: add on click event
+    */
+    tr.setAttribute("id", id + '-' + args[7]);
+    tr.onclick = function() {
+        alert(args[7]);
+        data_url = "url to get msg";
+        data = {
+            alarm_id: args[7]
+        };
+        $.post(data_url, data, function(res, status) {
+            try {
+                var msg = JSON.parse(res.data);
+                console.log(msg);
+                handleAbnormalPaths(msg);
+                handleNormalPaths(msg);
+                setTimeout(function () {
+                    svg.selectAll("*")
+                        .transition()
+                        .duration(1000)
+                        .style('opacity', 0)
+                        .remove();
+                    svg.selectAll("*").remove();
+                    for(var i = 0; i < markers.length; i ++) {
+                        map.removeLayer(markers[i]);
+                    }
+                }, 7000);
+                handleLegendType(msg);
+                handle
+            } catch(err) {
+                console.log(err)
+            }
+        });
+    };
     // tr.setAttribute("style", "height:32px;");
     //count = args.length;
     count = 1;
@@ -252,10 +288,10 @@ function prependCVERow(id, args) {
 
 function prependtest(id, args) {
     var tr = document.createElement('tr');
-    tr.setAttribute("id", id + '-' + args.alarm_id) // modified by maq18
-    tr.onclick = function() {
-        alert("hello world")
-    }
+    // tr.setAttribute("id", id + '-' + args.alarm_id) // modified by maq18
+    // tr.onclick = function() {
+    //     alert("hello world")
+    // }
     // tr.setAttribute("style", "height:32px;");
     //count = args.length;
     count = 1;
