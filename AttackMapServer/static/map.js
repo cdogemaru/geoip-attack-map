@@ -21,6 +21,7 @@ $(function () {
 
 });
 
+
 // add full screen option
 // L.control.fullscreen().addTo(map);
 
@@ -251,6 +252,10 @@ function prependCVERow(id, args) {
 
 function prependtest(id, args) {
     var tr = document.createElement('tr');
+    tr.setAttribute("id", id + '-' + args.alarm_id) // modified by maq18
+    tr.onclick = function() {
+        alert("hello world")
+    }
     // tr.setAttribute("style", "height:32px;");
     //count = args.length;
     count = 1;
@@ -313,11 +318,11 @@ function redrawCountIP(hashID, id, countList, codeDict) {
         img.src = path;
         td1.appendChild(valueNode);
         td2.appendChild(img);
-       
+
         var alink = document.createElement('a');
         alink.setAttribute("href","#");
         alink.setAttribute("class","showInfo");
-        alink.style.color = "white";        
+        alink.style.color = "white";
         alink.appendChild(keyNode);
 
         td3.appendChild(alink);
@@ -418,14 +423,15 @@ function handleLegendType(msg) {
              msg.prefix,
              msg.attacker_country_name,
              msg.victim_country_code,
-             msg.victim_country_name
+             msg.victim_country_name,
+             msg.alarm_id // Note: modified by maq18
              ];
 
     // if (attackType != "___") {
     //     prependTypeRow('attack-type', attackType);
     // }
 
-    if (attackCve[1] != "___"){                
+    if (attackCve[1] != "___"){
         prependCVERow('attack-cveresp', attackCve);
     }
     prependtest("attack-legend", None);
@@ -1078,7 +1084,7 @@ webSock.onmessage = function (e) {
     console.log("Got a websocket message...");
     try {
         var msg = JSON.parse(e.data);
-        console.log(msg);     
+        console.log(msg);
 
         // if (msg.abnormal_path_geos.length > 0) {
         //     var attacker_geo = msg.abnormal_path_geos[0][0];
@@ -1135,7 +1141,7 @@ webSock.onmessage = function (e) {
 };
 
 $(document).on("click","#informIP #exit", function (e) {
-    $("#informIP").hide();      
+    $("#informIP").hide();
 });
 
 $(document).on("click", '.container-fluid .showInfo', function(e) {
