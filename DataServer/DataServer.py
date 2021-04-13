@@ -420,34 +420,10 @@ def shutdown_and_report_stats():
     print('\nUnknowns...')
     for key in unknowns:
         print('{}: {}'.format(key, unknowns[key]))
+
+    with open("./available_infos.json", "w") as f:
+        json.dump(available_infos, f)
     exit()
-
-
-#def menu():
-    # Instantiate parser
-    #parser = ArgumentParser(
-    #        prog='DataServer.py',
-    #        usage='%(progs)s [OPTIONS]',
-    #        formatter_class=RawDescriptionHelpFormatter,
-    #        description=dedent('''\
-    #                --------------------------------------------------------------
-    #                Data server for attack map application.
-    #                --------------------------------------------------------------'''))
-
-    # @TODO --> Add support for command line args?
-    #define command line arguments
-    #parser.add_argument('-db', '--database', dest='db_path', required=True, type=str, help='path to maxmind database')
-    #parser.add_argument('-m', '--readme', dest='readme', help='print readme')
-    #parser.add_argument('-o', '--output', dest='output', help='file to write logs to')
-    #parser.add_argument('-r', '--random', action='store_true', dest='randomize', help='generate random IPs/protocols for demo')
-    #parser.add_argument('-rs', '--redis-server-ip', dest='redis_ip', type=str, help='redis server ip address')
-    #parser.add_argument('-sp', '--syslog-path', dest='syslog_path', type=str, help='path to syslog file')
-    #parser.add_argument('-v', '--verbose', action='store_true', dest='verbose', help='run server in verbose mode')
-
-    # Parse arguments/options
-    #args = parser.parse_args()
-    #return args
-
 
 def merge_dicts(*args):
     super_dict = {}
@@ -482,6 +458,8 @@ def track_stats(super_dict, tracking_dict, key):
         else:
             unknowns[key] = 1
 
+
+available_infos = {}
 
 def main():
     if getuid() != 0:
@@ -524,12 +502,21 @@ def main():
                         geo_dict
                     )
                     json_data = json.dumps(super_dict)
+                    print(json_data)
                     redis_instance.publish('attack-map-production', json_data)
 
-                    available_indexs.add(syslog_data_dict["index"])
-                    with open("./avalaible_indexs.txt", "w") as f:
-                        print(available_indexs)
-                        f.write(str(list(available_indexs)))
+                    index = syslog_data_dict["index"]
+
+                    if not index in available_infos:
+                        available_infos[index] = super_dict
+                        with open("./available_infos.json", "w") as f:
+                            json.dump(available_infos, f)
+
+
+
+                    # with open("./avalaible_indexs.txt", "w") as f:
+                    #     print(available_indexs)
+                    #     f.write(str(list(available_indexs)))
 
 
 

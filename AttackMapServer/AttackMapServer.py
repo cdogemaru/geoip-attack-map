@@ -45,6 +45,21 @@ class IndexHandler(tornado.web.RequestHandler):
         request.render('index.html')
 
 
+
+class DataHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    def post(self):
+        with open("../DataServer/avalable_infos.json", "r") as f:
+            alarm_dict = json.load(f)
+        alarm_id = self.get_argument("alarm_id")
+        alarm_id = str(alarm_id)
+        alarm = alarm_dict[alarm_id]
+        print(alarm)
+        self.write(alarm)
+
+
+
+
 class WebSocketChatHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
         super(WebSocketChatHandler, self).__init__(*args,**kwargs)

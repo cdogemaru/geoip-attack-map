@@ -9,30 +9,10 @@ var webSock = new WebSocket("ws:/166.111.68.233:43241/websocket"); // Internal
 
 L.mapbox.accessToken = 'pk.eyJ1IjoiY2RvZ2VtYXJ1IiwiYSI6ImNrbXc2a29veDBieXoydnFudnAwcHd2NWQifQ.p7fS86vrdu0OY5bS-xLocw';
 var map = L.mapbox.map("map", "mapbox.dark", {
-    center: [0, 0], // lat, long
+    center: [10, -40], // lat, long
     zoom: 2,
     zoomControl: false
 });
-
-$(function () {
-    $("#content-1").mCustomScrollbar({
-        theme: "rounded-dots-dark"
-    });
-
-});
-
-// add full screen option
-// L.control.fullscreen().addTo(map);
-
-// hq coords
-// var hqLatLng = new L.LatLng(-122.0881, 37.3845);
-
-// // hq marker
-// L.circle(hqLatLng, 110000, {
-//     color: 'red',
-//     fillColor: 'yellow',
-//     fillOpacity: 0.5,
-// }).addTo(map);
 
 var svg = d3.select(map.getPanes().tilePane).append("svg")
     .attr("class", "leaflet-zoom-animated")
@@ -40,43 +20,43 @@ var svg = d3.select(map.getPanes().tilePane).append("svg")
     .attr("height", window.innerHeight)
     .attr("pointer-events", "auto");
 
-// function update1() {
+// function translateSVG() {
+//     var viewBoxLeft = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.x;
+//     var viewBoxTop = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.y;
+
+//     // Resizing width and height in case of window resize
+//     svg.attr("width", window.innerWidth);
+//     svg.attr("height", window.innerHeight);
+
+//     // Adding the ViewBox attribute to our SVG to contain it
+//     svg.attr("viewBox", function () {
+//         return "" + viewBoxLeft + " " + viewBoxTop + " "  + window.innerWidth + " " + window.innerHeight;
+//     });
+
+//     // Adding the style attribute to our SVG to translate it
+//     svg.attr("style", function () {
+//         return "transform: translate3d(" + viewBoxLeft + "px, " + viewBoxTop + "px, 0px);";
+//     });
 // }
 
-// map.on("zoomend", update1)
+// function update() {
+//     console.log("updating");
+//     translateSVG();
+// }
 
-function translateSVG() {
-    var viewBoxLeft = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.x;
-    var viewBoxTop = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.y;
+// map.on("moveend", update);
 
-    // Resizing width and height in case of window resize
-    svg.attr("width", window.innerWidth);
-    svg.attr("height", window.innerHeight);
-
-    // Adding the ViewBox attribute to our SVG to contain it
-    svg.attr("viewBox", function () {
-        return "" + viewBoxLeft + " " + viewBoxTop + " "  + window.innerWidth + " " + window.innerHeight;
+$(function () {
+    console.log("test");
+    $("#legend-table").mCustomScrollbar({
+        theme: "rounded-dark",
+        autoHideScrollbar: false
     });
-
-    // Adding the style attribute to our SVG to translate it
-    svg.attr("style", function () {
-        return "transform: translate3d(" + viewBoxLeft + "px, " + viewBoxTop + "px, 0px);";
+    $("#attack-table").mCustomScrollbar({
+        theme: "rounded-dark",
+        autoHideScrollbar: false
     });
-}
-
-function update() {
-    console.log("updating");
-    // svg.selectAll("circle")
-    //     .attr("cx", function (d) { return map.latLngToLayerPoint([d.lati, d.long]).x })
-    //     .attr("cy", function (d) { return map.latLngToLayerPoint([d.lati, d.long]).y })
-    translateSVG();
-    // additional stuff
-}
-
-// Re-draw on reset, this keeps the markers where they should be on reset/zoom
-map.on("moveend", update);
-// map.on("zoomend", update);
-// map.on("viewreset", update);
+});
 
 function calcMidpoint(x1, y1, x2, y2, bend) {
     var tmpx = (x1 + x2) / 2;
@@ -105,137 +85,62 @@ function translateAlong(path) {
     }
 }
 
-function prependAttackRow(id, args) {
-    var tr = document.createElement('tr');
-    count = args.length;
-
-    for (var i = 0; i < count; i++) {
-        var td = document.createElement('td');
-        if (args[i] === args[2]) {
-            var path = 'flags/' + args[i] + '.png';
-            var img = document.createElement('img');
-            img.src = path;
-            td.appendChild(img);
-            tr.appendChild(td);
-        } else {
-            var textNode = document.createTextNode(args[i]);
-            td.appendChild(textNode);
-            tr.appendChild(td);
-        }
-    }
-
-    var element = document.getElementById(id);
-    var rowCount = element.rows.length;
-
-    // Only allow 50 rows
-    if (rowCount >= 50) {
-        element.deleteRow(rowCount -1);
-    }
-
-    element.insertBefore(tr, element.firstChild);
-}
-
-function prependTypeRow(id, args) {
-    var tr = document.createElement('tr');
-    count = args.length;
-
-    for (var i = 0; i < count; i++) {
-        var td = document.createElement('td');
-        var textNode = document.createTextNode(args[i]);
-        td.appendChild(textNode);
-        tr.appendChild(td);
-    }
-
-    var element = document.getElementById(id);
-    var rowCount = element.rows.length;
-
-    // Only allow 50 rows
-    if (rowCount >= 50) {
-        element.deleteRow(rowCount -1);
-    }
-
-    element.insertBefore(tr, element.firstChild);
-}
-
 function prependCVERow(id, args) {
     var tr = document.createElement('tr');
-    // tr.setAttribute("style", "height:32px;");
-    //count = args.length;
     count = 1;
 
     for (var i = 0; i < count; i++) {
-
-        // <th style='width:20%;'>Timestamp</th>
-        // <th style='width:20%;'>Attack Type</th>
-        // <th style='width:10%;'></th>
-        // <th style='width:10%;'>Victim Loc</th>
-        // <th style='width:10%;'></th>
-        // <th style='width:10%;'>Attacker Loc</th>
-        // <th style='width:20%;'>Hijacked Prefix</th>
-
-        // var attackCve = [
-        //  0   time,//msg.event_time,
-        //  1   attackType,
-        //  2   msg.attacker_country_code,
-        //  3   msg.prefix,
-        //  4   msg.attacker_country_name,
-        //  5   msg.victim_country_code,
-        //  6   msg.victim_country_name
-        // ];
-        var td1 = document.createElement('td');
-        var td2 = document.createElement('td');
-        var td3 = document.createElement('td');
-        var td4 = document.createElement('td');
-        var td5 = document.createElement('td');
-        var td6 = document.createElement('td');
-        var td7 = document.createElement('td');
+        var td = document.createElement('td');
 
         // Timestamp
-        var textNode2 = document.createTextNode(args[0]);
-        td1.appendChild(textNode2);
-        tr.appendChild(td1);
+        var textNode = document.createTextNode(args[0]);
+        td.appendChild(textNode);
+        tr.appendChild(td);
 
-        // Attack Type
-        var textNode = document.createTextNode(args[1]);
-        var alink = document.createElement('a');
-        alink.setAttribute("href",args[1]);
-        alink.setAttribute("target","_blank")
-        alink.style.color = "white";
-        alink.appendChild(textNode);
-        td2.appendChild(alink);
-        tr.appendChild(td2);
+        // attacker ASN
+        var td = document.createElement('td');
+        var textNode = document.createTextNode(args[7]);
+        td.appendChild(textNode);
+        tr.appendChild(td);
 
-        // victim location
+        // attacker location
+        var td = document.createElement('td');
         var path = 'flags/' + args[2] + '.png';
         var img = document.createElement('img');
         img.src = path;
-        td3.appendChild(img);
-        tr.appendChild(td3);
+        td.appendChild(img);
+        tr.appendChild(td);
 
-        var textNode3 = document.createTextNode(args[4]);
-        td4.appendChild(textNode3);
-        tr.appendChild(td4);
+        var td = document.createElement('td');
+        var textNode = document.createTextNode(args[4]);
+        td.appendChild(textNode);
+        tr.appendChild(td);
 
-        // attacker location
+        // victim ASN        
+        var td = document.createElement('td');
+        var textNode = document.createTextNode(args[8]);
+        td.appendChild(textNode);
+        tr.appendChild(td);
+
+        // victim location
+        var td = document.createElement('td');
         var path = 'flags/' + args[5] + '.png';
         var img = document.createElement('img');
         img.src = path;
-        td5.appendChild(img);
-        tr.appendChild(td5);
+        td.appendChild(img);
+        tr.appendChild(td);
 
+        var td = document.createElement('td');
+        var textNode = document.createTextNode(args[6]);
+        td.appendChild(textNode);
+        tr.appendChild(td);
 
-        var textNode4 = document.createTextNode(args[6]);
-        td6.appendChild(textNode4);
-        tr.appendChild(td6);
+        // Hijacked prefix
+        var td = document.createElement('td');
+        var textNode = document.createTextNode(args[3]);
+        td.appendChild(textNode);
+        tr.appendChild(td);
 
-
-        //prefix
-        var textNode5 = document.createTextNode(args[3]);
-        td7.appendChild(textNode5);
-        tr.appendChild(td7);
-        // var textNode3 = document.createTextNode(args[3]);
-        // td4.appendChild(textNode3);
-        // tr.appendChild(td4);
     }
 
     var element = document.getElementById(id);
@@ -249,140 +154,35 @@ function prependCVERow(id, args) {
     element.insertBefore(tr, element.firstChild);
 }
 
-function prependtest(id, args) {
-    var tr = document.createElement('tr');
-    // tr.setAttribute("style", "height:32px;");
-    //count = args.length;
-    count = 1;
+function prependLegendRow(id) {
 
-    for (var i = 0; i < count; i++) {
-        var td1 = document.createElement('td');
-        var td2 = document.createElement('td');
-        var path = "statics/attacker.svg";
-        var img = document.createElement('img');
-        img.src = path;
-        td1.appendChild(img);
-        tr.appendChild(td1);
-
-        var textNode2 = document.createTextNode("Attacker");
-        td2.appendChild(textNode2);
-        tr.appendChild(td2);
-
-
-    }
+    fnames = ["attacker.svg", "target.svg", "eye.svg", "red_line.svg", "green_line.svg"];
+    texts = ["Attacker", "Victim", "Vantage Point", "Hijacked Path", "Normal Path"];
 
     var element = document.getElementById(id);
-    var rowCount = element.rows.length;
+    for (var i = 0; i < fnames.length; i++) {
+        var tr = document.createElement('tr');
 
-    // // Only allow 50 rows
-    // if (rowCount >= 50) {
-    //     element.deleteRow(rowCount - 1);
-    // }
-
-    element.insertBefore(tr, element.firstChild);
-}
-
-function redrawCountIP(hashID, id, countList, codeDict) {
-    $(hashID).empty();
-    var element = document.getElementById(id);
-
-    // Sort ips greatest to least
-    // Create items array from dict
-    var items = Object.keys(countList[0]).map(function(key) {
-        return [key, countList[0][key]];
-    });
-    // Sort the array based on the second element
-    items.sort(function(first, second) {
-        return second[1] - first[1];
-    });
-    // Create new array with only the first 50 items
-    var sortedItems = items.slice(0, 50);
-    var itemsLength = sortedItems.length;
-
-    for (var i = 0; i < itemsLength; i++) {
-        tr = document.createElement('tr');
-        td1 = document.createElement('td');
-        td2 = document.createElement('td');
-        td3 = document.createElement('td');
-        var key = sortedItems[i][0];
-        value = sortedItems[i][1];
-        var keyNode = document.createTextNode(key);
-        var valueNode = document.createTextNode(value);
-        var path = 'flags/' + codeDict[key] + '.png';
+        // legend
+        var td = document.createElement('td');
+        var path = 'static/' + fnames[i];
         var img = document.createElement('img');
         img.src = path;
-        td1.appendChild(valueNode);
-        td2.appendChild(img);
-       
-        var alink = document.createElement('a');
-        alink.setAttribute("href","#");
-        alink.setAttribute("class","showInfo");
-        alink.style.color = "white";        
-        alink.appendChild(keyNode);
+        img.setAttribute("style", "width:20%;");
+        td.appendChild(img);
+        tr.appendChild(td);
 
-        td3.appendChild(alink);
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tr.appendChild(td3);
-        element.appendChild(tr);
+        // text
+        var td = document.createElement('td');
+        var textNode = document.createTextNode(texts[i]);
+        td.appendChild(textNode);
+        tr.appendChild(td);
+
+        element.insertBefore(tr, element.firstChild);
     }
+
 }
-
-function redrawCountIP2(hashID, id, countList, codeDict) {
-    $(hashID).empty();
-    var element = document.getElementById(id);
-
-    // Sort ips greatest to least
-    // Create items array from dict
-    var items = Object.keys(countList[0]).map(function(key) {
-        return [key, countList[0][key]];
-    });
-    // Sort the array based on the second element
-    items.sort(function(first, second) {
-        return second[1] - first[1];
-    });
-    // Create new array with only the first 50 items
-    var sortedItems = items.slice(0, 50);
-    var itemsLength = sortedItems.length;
-
-    for (var i = 0; i < itemsLength; i++) {
-        tr = document.createElement('tr');
-        td1 = document.createElement('td');
-        td2 = document.createElement('td');
-        td3 = document.createElement('td');
-        var key = sortedItems[i][0];
-        value = sortedItems[i][1];
-        var keyNode = document.createTextNode(key);
-        var valueNode = document.createTextNode(value);
-        var path = 'flags/' + codeDict[key] + '.png';
-        var img = document.createElement('img');
-        img.src = path;
-        td1.appendChild(valueNode);
-        td2.appendChild(img);
-
-        td3.appendChild(keyNode);
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tr.appendChild(td3);
-        element.appendChild(tr);
-    }
-}
-
-function handleLegend(msg) {
-    var ipCountList = [msg.ips_tracked,
-               msg.iso_code];
-    var countryCountList = [msg.countries_tracked,
-                msg.iso_code];
-    var attackList = [msg.event_time,
-              msg.src_ip,
-              msg.iso_code,
-              msg.country,
-              msg.city,
-              msg.protocol];
-    redrawCountIP('#ip-tracking','ip-tracking', ipCountList, msg.ip_to_code);
-    redrawCountIP2('#country-tracking', 'country-tracking', countryCountList, msg.country_to_code);
-    prependAttackRow('attack-tracking', attackList);
-}
+prependLegendRow('attack-legendresp');
 
 function handleLegendType(msg) {
     if (msg.attack_type == 1) {
@@ -418,21 +218,17 @@ function handleLegendType(msg) {
              msg.prefix,
              msg.attacker_country_name,
              msg.victim_country_code,
-             msg.victim_country_name
+             msg.victim_country_name,
+             msg.attacker,
+             msg.victim
              ];
 
-    // if (attackType != "___") {
-    //     prependTypeRow('attack-type', attackType);
-    // }
 
-    if (attackCve[1] != "___"){                
-        prependCVERow('attack-cveresp', attackCve);
-    }
-    prependtest("attack-legend", None);
+    prependCVERow('attack-cveresp', attackCve);
+
 }
 
-// WEBSOCKET STUFF
-// document:https://docs.mapbox.com/mapbox.js/api/v3.3.1/l-mapbox-map/
+
 
 function transitionNext(i, _index, msg, is_abnormal) {
     if (is_abnormal) {
@@ -525,8 +321,6 @@ function transitionNext(i, _index, msg, is_abnormal) {
                 _index = _index + 1;
                 transitionNext(i, _index, msg, is_abnormal);
             });
-
-
 }
 
 var circles = new L.LayerGroup();
@@ -549,9 +343,7 @@ function addCircle(color, fillcolor, srcLatLng) {
     }).addTo(circles);
 }
 
-
 var markers = [];
-
 function handleAbnormalPaths(msg) {
 
     var path_num = Math.min(msg.abnormal_path_geos.length, 3);
@@ -811,7 +603,6 @@ function handleAbnormalPaths(msg) {
         }
     }
 }
-
 
 function handleNormalPaths(msg) {
 
@@ -1079,32 +870,8 @@ webSock.onmessage = function (e) {
     try {
         var msg = JSON.parse(e.data);
         console.log(msg);     
-
-        // if (msg.abnormal_path_geos.length > 0) {
-        //     var attacker_geo = msg.abnormal_path_geos[0][0];
-        //     var srcLatLng = new L.LatLng(attacker_geo[1], attacker_geo[0]);
-        //     addCircle("#ff0000", "#ffe268", srcLatLng);
-        // }
-
-        // if (msg.normal_path_geos.length > 0) {
-        //     var victim_geo = msg.normal_path_geos[0][0];
-        //     var srcLatLng = new L.LatLng(victim_geo[1], victim_geo[0]);
-        //     addCircle("#9ede73", "#feffde", srcLatLng);
-        // }
-
-        // var hqPoint = map.latLngToLayerPoint(hqLatLng);
-        // for (var i = 0; i < msg.abnormal_path_geos.length; i++) {
-        //     transitionNext(i, 0, msg, true);
-        // }
-        // for (var i = 0; i < msg.normal_path_geos.length; i++) {
-        //     transitionNext(i, 0, msg, false);
-        // }
-
         handleAbnormalPaths(msg);
         handleNormalPaths(msg);
-
-
-
 
         setTimeout(function () {
             svg.selectAll("*")
@@ -1112,23 +879,12 @@ webSock.onmessage = function (e) {
                 .duration(1000)
                 .style('opacity', 0)
                 .remove();
-
             svg.selectAll("*").remove();
-
             for(var i = 0; i < markers.length; i ++) {
                 map.removeLayer(markers[i]);
             }
-            // svg.selectAll("path")
-            //     .transition()
-            //     .duration(1000)
-            //     // .attr('r', circleRadius * 2.5)
-            //     .style('opacity', 0)
-            //     .remove();
-            // svg.selectAll("circle")
         }, 7000);
-
         handleLegendType(msg);
-        handle
     } catch(err) {
         console.log(err)
     }
