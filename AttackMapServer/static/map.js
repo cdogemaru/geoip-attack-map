@@ -95,10 +95,11 @@ function prependCVERow(id, args) {
             alarm_id: args[9]
         };
         $.post(data_url, data, function (res, status) {
-            console.log(res);
             try {
-                var msg = JSON.parse(res.data);
+                var msg = JSON.parse(res);
                 console.log(msg);
+
+                svg.selectAll("*").remove();
                 handleAbnormalPaths(msg);
                 handleNormalPaths(msg);
                 setTimeout(function () {
@@ -112,7 +113,6 @@ function prependCVERow(id, args) {
                         map.removeLayer(markers[i]);
                     }
                 }, 7000);
-                handleLegendType(msg);
                 handle
             } catch (err) {
                 console.log(err)
@@ -520,7 +520,7 @@ function handleAbnormalPaths(msg) {
 
                 if (i == path_num - 1) {
                     end_node.on("end", function () {
-                        console.log(lineGraphs);
+                        // console.log(lineGraphs);
                         for (var k = 0; k < end_node_edges.length; k++) {
                             end_node_edges[k]
                                 .style('stroke-opacity', 1)
@@ -781,7 +781,7 @@ function handleNormalPaths(msg) {
 
                 if (i == path_num - 1) {
                     end_node.on("end", function () {
-                        console.log(lineGraphs);
+                        // console.log(lineGraphs);
                         for (var k = 0; k < end_node_edges.length; k++) {
                             end_node_edges[k]
                                 .style('stroke-opacity', 1)
@@ -898,7 +898,7 @@ webSock.onmessage = function (e) {
     console.log("Got a websocket message...");
     try {
         var msg = JSON.parse(e.data);
-        console.log(msg);     
+        // console.log(msg);     
         handleAbnormalPaths(msg);
         handleNormalPaths(msg);
 

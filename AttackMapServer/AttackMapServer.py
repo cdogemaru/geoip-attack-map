@@ -52,6 +52,7 @@ class DataHandler(tornado.web.RequestHandler):
         with open("../DataServer/avalable_infos.json", "r") as f:
             alarm_dict = json.load(f)
         alarm_id = self.get_argument("alarm_id")
+        print(alarm_id)
         alarm_id = str(alarm_id)
         alarm = alarm_dict[alarm_id]
         print(alarm)
@@ -213,8 +214,13 @@ class WebSocketChatHandler(tornado.websocket.WebSocketHandler):
             ip_to_code = json_data['ip_to_code']
         else:
             ip_to_code = None
-
+            
+        if 'index' in json_data:
+            index = json_data['index']
+        else:
+            index = None
         msg_to_send = {
+                        'alarm_id' : index,
                         'type': msg_type,
                         'type2': msg_type2, 
                         'type3': msg_type3,
@@ -251,6 +257,7 @@ class WebSocketChatHandler(tornado.websocket.WebSocketHandler):
 def main():
     # Register handler pages
     handlers = [
+                (r'/data', DataHandler),
                 (r'/websocket', WebSocketChatHandler),
                 (r'/static/(.*)', tornado.web.StaticFileHandler, {'path': 'static'}),
                 (r'/flags/(.*)', tornado.web.StaticFileHandler, {'path': 'static/flags'}),

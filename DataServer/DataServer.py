@@ -188,6 +188,7 @@ def parse_syslog(line):
         #   vp_info
         ###
 
+        time = a[1]
         prefix = a[4]
         # prefix = None
         t = a_info["type"]
@@ -221,6 +222,7 @@ def parse_syslog(line):
         # abnormal_paths = list(abnormal_paths)
 
         data_dict = {
+            "timestamp" : time,
             "index" : data[0],
             "prefix": prefix,
             "attacker": attacker,
