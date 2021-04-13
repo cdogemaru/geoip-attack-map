@@ -29,8 +29,14 @@ var svg = d3.select(map.getPanes().tilePane).append("svg")
 var accept_message = 1
 var ctlbutton = document.getElementById("ctlbtn")
 ctlbtn.onclick = function() {
+    clear_canvas();
     accept_message = 1;
+    console.log(accept_message);
 };
+
+
+// make sure T is large enough
+var T = 1000;
 
 // function translateSVG() {
 //     var viewBoxLeft = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.x;
@@ -107,6 +113,7 @@ function prependCVERow(id, args) {
             alarm_id: args[9]
         };
         $.post(data_url, data, function (res, status) {
+            clear_canvas();
             try {
                 var msg = JSON.parse(res);
                 console.log(msg);
@@ -117,17 +124,6 @@ function prependCVERow(id, args) {
                 handleAbnormalPaths(msg);
                 handleNormalPaths(msg);
                 accept_message = 0
-                // setTimeout(function () {
-                //     svg.selectAll("*")
-                //         .transition()
-                //         .duration(1000)
-                //         .style('opacity', 0)
-                //         .remove();
-                //     svg.selectAll("*").remove();
-                //     for (var i = 0; i < markers.length; i++) {
-                //         map.removeLayer(markers[i]);
-                //     }
-                // }, 7000);
             } catch (err) {
                 console.log(err)
             }
@@ -562,7 +558,7 @@ function handleAbnormalPaths(msg) {
                                 });
                         }
                         for (var k = 0; k < dots.length; k++) {
-                            for (var t = 0; t < 6; t++) {
+                            for (var t = 0; t < T; t++) {
                                 dots[k]
                                     .attr('r', 3)
                                     .attr('fill', color)
@@ -823,7 +819,7 @@ function handleNormalPaths(msg) {
                                 });
                         }
                         for (var k = 0; k < dots.length; k++) {
-                            for (var t = 0; t < 6; t++) {
+                            for (var t = 0; t < T; t++) {
                                 dots[k]
                                     .attr('r', 3)
                                     .attr('fill', color)
@@ -908,30 +904,42 @@ function handleNormalPaths(msg) {
     }
 }
 
+function clear_canvas() {
+    svg.selectAll("*")
+        .transition()
+        .duration(1000)
+        .style('opacity', 0)
+        .remove();
+    svg.selectAll("*").remove();
+    for (var i = 0; i < markers.length; i++) {
+        map.removeLayer(markers[i]);
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+sleep(2000).then(() => { console.log("World!"); });
+
 webSock.onmessage = function (e) {
-    if (accept_message == 1) {
-        console.log("Got a websocket message...");
-        try {
-            var msg = JSON.parse(e.data);
-            // console.log(msg);
+    console.log("Got a websocket message...");
+    try {
+        var msg = JSON.parse(e.data);
+        if (accept_message == 1) {
+            clear_canvas();
             handleAbnormalPaths(msg);
             handleNormalPaths(msg);
-
-            setTimeout(function () {
-                svg.selectAll("*")
-                    .transition()
-                    .duration(1000)
-                    .style('opacity', 0)
-                    .remove();
-                svg.selectAll("*").remove();
-                for(var i = 0; i < markers.length; i ++) {
-                    map.removeLayer(markers[i]);
+            sleep(7000).then(() => {
+                if (accept_message == 1) {
+                    clear_canvas();
                 }
-            }, 7000);
-            handleLegendType(msg);
-        } catch(err) {
-            console.log(err)
+            });
+
         }
+        handleLegendType(msg);
+    } catch(err) {
+        console.log(err)
     }
 };
 
