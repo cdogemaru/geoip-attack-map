@@ -34,6 +34,8 @@ ctlbtn.onclick = function() {
     console.log(accept_message);
 };
 
+var tmp_hlighted_alarm_id = -1;
+
 
 // make sure T is large enough
 var T = 1000;
@@ -105,13 +107,22 @@ function translateAlong(path) {
 
 function prependCVERow(id, args) {
     var tr = document.createElement('tr');
-    tr.setAttribute("id", id + '-' + args[7]);
+    tr.setAttribute("id", id + '-' + args[9]);
     tr.onclick = function () {
         // alert(args[9]);
         data_url = "/data/";
         data = {
             alarm_id: args[9]
         };
+        if (tmp_hlighted_alarm_id != -1) {
+            var tmp_tr = document.getElementById('attack-cveresp' + '-' + tmp_hlighted_alarm_id);
+            if (tmp_tr != null) {
+                tmp_tr.style.backgroundColor = "transparent";
+            }
+        }
+        tr.style.backgroundColor = "#99ff99";
+        // this.style.backgroundColor = "#99ff99";
+        tmp_hlighted_alarm_id = args[9];
         $.post(data_url, data, function (res, status) {
             clear_canvas();
             try {
@@ -935,11 +946,27 @@ webSock.onmessage = function (e) {
                     clear_canvas();
                 }
             });
-
+        }
+        var msg_alarm_id = msg.alarm_id
+        var tb_elem = document.getElementById('attack-cveresp' + '-' + msg_alarm_id)
+        if (tb_elem != null) {
+            tb_elem.parentNode.removeChild(tb_elem);
         }
         handleLegendType(msg);
+        if (accept_message == 1) {
+            var msg_alarm_id = msg.alarm_id;
+            var tb_elem = document.getElementById('attack-cveresp' + '-' + msg_alarm_id);
+            tb_elem.style.backgroundColor = "#99ff99";
+            if (tmp_hlighted_alarm_id != -1) {
+                var tmp_hlighted_tr = document.getElementById('attack-cveresp' + '-' + tmp_hlighted_alarm_id);
+                if (tmp_hlighted_tr != null) {
+                    tmp_hlighted_tr.style.backgroundColor = "transparent";
+                }
+            }
+            tmp_hlighted_alarm_id = msg_alarm_id;
+        }
     } catch(err) {
-        console.log(err)
+        console.log(err);
     }
 };
 
