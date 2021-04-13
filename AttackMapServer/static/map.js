@@ -87,6 +87,38 @@ function translateAlong(path) {
 
 function prependCVERow(id, args) {
     var tr = document.createElement('tr');
+    tr.setAttribute("id", id + '-' + args[7]);
+    tr.onclick = function () {
+        alert(args[9]);
+        data_url = "/data/";
+        data = {
+            alarm_id: args[9]
+        };
+        $.post(data_url, data, function (res, status) {
+            console.log(res);
+            try {
+                var msg = JSON.parse(res.data);
+                console.log(msg);
+                handleAbnormalPaths(msg);
+                handleNormalPaths(msg);
+                setTimeout(function () {
+                    svg.selectAll("*")
+                        .transition()
+                        .duration(1000)
+                        .style('opacity', 0)
+                        .remove();
+                    svg.selectAll("*").remove();
+                    for (var i = 0; i < markers.length; i++) {
+                        map.removeLayer(markers[i]);
+                    }
+                }, 7000);
+                handleLegendType(msg);
+                handle
+            } catch (err) {
+                console.log(err)
+            }
+        });
+    };
     count = 1;
 
     for (var i = 0; i < count; i++) {
@@ -103,8 +135,8 @@ function prependCVERow(id, args) {
         td.appendChild(textNode);
         tr.appendChild(td);
 
-        // attacker location
         var td = document.createElement('td');
+
         var path = 'flags/' + args[2] + '.png';
         var img = document.createElement('img');
         img.src = path;
@@ -155,7 +187,6 @@ function prependCVERow(id, args) {
 }
 
 function prependLegendRow(id) {
-
     fnames = ["attacker.svg", "target.svg", "eye.svg", "red_line.svg", "green_line.svg"];
     texts = ["Attacker", "Victim", "Vantage Point", "Hijacked Path", "Normal Path"];
 
@@ -212,23 +243,21 @@ function handleLegendType(msg) {
 
     var time = year + "-" + month + "-" + date + " " + hour + ":" + minu + ":" + sec;
 
-    var attackCve = [time,//msg.event_time,
-             attackType,
-             msg.attacker_country_code,
-             msg.prefix,
-             msg.attacker_country_name,
-             msg.victim_country_code,
-             msg.victim_country_name,
-             msg.attacker,
-             msg.victim
-             ];
-
-
+    var attackCve = [
+            time,//msg.event_time,
+            attackType,
+            msg.attacker_country_code,
+            msg.prefix,
+            msg.attacker_country_name,
+            msg.victim_country_code,
+            msg.victim_country_name,
+            msg.attacker,
+            msg.victim,
+            msg.alarm_id // Note: modified by maq18
+            ];
     prependCVERow('attack-cveresp', attackCve);
 
 }
-
-
 
 function transitionNext(i, _index, msg, is_abnormal) {
     if (is_abnormal) {
@@ -891,7 +920,7 @@ webSock.onmessage = function (e) {
 };
 
 $(document).on("click","#informIP #exit", function (e) {
-    $("#informIP").hide();      
+    $("#informIP").hide();
 });
 
 $(document).on("click", '.container-fluid .showInfo', function(e) {
