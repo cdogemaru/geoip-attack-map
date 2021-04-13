@@ -21,10 +21,10 @@
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
             integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
             crossorigin="anonymous"></script>
-            
+
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
         <script src='https://cdn.jsdelivr.net/jquery.mcustomscrollbar/3.0.6/jquery.mCustomScrollbar.concat.min.js'></script>
-        
+
         <!--CSS LINKS-->
         <link href='https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.css' rel='stylesheet' />
         <link href='https://cdn.jsdelivr.net/jquery.mcustomscrollbar/3.0.6/jquery.mCustomScrollbar.min.css'
@@ -34,11 +34,13 @@
             integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
         <link href='static/index.css'rel='stylesheet'/>
 
-      
+
     </head>
 
     <body>
-
+    <div name = "ctlbutton" id="ctlbtn" style="position:absolute;right:50px;top:50px;width:50px;height:50px">
+        <img src="/static/button.jpeg" width="50px" height="50px">
+    </div>
     <div id="map"></div>
     <div id='informIP'></div>
     <div class="container-fluid" id="left-container">
@@ -82,7 +84,7 @@
                 <div class="card mx-auto table-card">
                     <div class="card-body pl-3 pr-1 py-2">
                         <div class="table-div" id='legend-table'>
-                            <table class="table table-sm"> 
+                            <table class="table table-sm">
                                 <thead>
                                         <th style='width:50%;'>Symbol</th>
                                         <th style='width:50%;'>Meaning</th>
@@ -124,9 +126,9 @@
             </div>
         </div>
     </div>
-    
+
     <script src="/static/map.js"></script>
-    
+
     </body>
 
 </html>

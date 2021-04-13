@@ -20,6 +20,18 @@ var svg = d3.select(map.getPanes().tilePane).append("svg")
     .attr("height", window.innerHeight)
     .attr("pointer-events", "auto");
 
+/**
+    author: maq18
+    date: 2021-4-31 14:58
+    content: add a control button to block the on message when table
+            row is clicked.
+*/
+var accept_message = 1
+var ctlbutton = document.getElementById("ctlbtn")
+ctlbtn.onclick = function() {
+    accept_message = 1;
+};
+
 // function translateSVG() {
 //     var viewBoxLeft = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.x;
 //     var viewBoxTop = document.querySelector("svg.leaflet-zoom-animated").viewBox.animVal.y;
@@ -89,7 +101,7 @@ function prependCVERow(id, args) {
     var tr = document.createElement('tr');
     tr.setAttribute("id", id + '-' + args[7]);
     tr.onclick = function () {
-        alert(args[9]);
+        // alert(args[9]);
         data_url = "/data/";
         data = {
             alarm_id: args[9]
@@ -98,22 +110,24 @@ function prependCVERow(id, args) {
             try {
                 var msg = JSON.parse(res);
                 console.log(msg);
-
                 svg.selectAll("*").remove();
+                for (var i = 0; i < markers.length; i++) {
+                    map.removeLayer(markers[i]);
+                }
                 handleAbnormalPaths(msg);
                 handleNormalPaths(msg);
-                setTimeout(function () {
-                    svg.selectAll("*")
-                        .transition()
-                        .duration(1000)
-                        .style('opacity', 0)
-                        .remove();
-                    svg.selectAll("*").remove();
-                    for (var i = 0; i < markers.length; i++) {
-                        map.removeLayer(markers[i]);
-                    }
-                }, 7000);
-                handle
+                accept_message = 0
+                // setTimeout(function () {
+                //     svg.selectAll("*")
+                //         .transition()
+                //         .duration(1000)
+                //         .style('opacity', 0)
+                //         .remove();
+                //     svg.selectAll("*").remove();
+                //     for (var i = 0; i < markers.length; i++) {
+                //         map.removeLayer(markers[i]);
+                //     }
+                // }, 7000);
             } catch (err) {
                 console.log(err)
             }
@@ -148,7 +162,7 @@ function prependCVERow(id, args) {
         td.appendChild(textNode);
         tr.appendChild(td);
 
-        // victim ASN        
+        // victim ASN
         var td = document.createElement('td');
         var textNode = document.createTextNode(args[8]);
         td.appendChild(textNode);
@@ -895,27 +909,29 @@ function handleNormalPaths(msg) {
 }
 
 webSock.onmessage = function (e) {
-    console.log("Got a websocket message...");
-    try {
-        var msg = JSON.parse(e.data);
-        // console.log(msg);     
-        handleAbnormalPaths(msg);
-        handleNormalPaths(msg);
+    if (accept_message == 1) {
+        console.log("Got a websocket message...");
+        try {
+            var msg = JSON.parse(e.data);
+            // console.log(msg);
+            handleAbnormalPaths(msg);
+            handleNormalPaths(msg);
 
-        setTimeout(function () {
-            svg.selectAll("*")
-                .transition()
-                .duration(1000)
-                .style('opacity', 0)
-                .remove();
-            svg.selectAll("*").remove();
-            for(var i = 0; i < markers.length; i ++) {
-                map.removeLayer(markers[i]);
-            }
-        }, 7000);
-        handleLegendType(msg);
-    } catch(err) {
-        console.log(err)
+            setTimeout(function () {
+                svg.selectAll("*")
+                    .transition()
+                    .duration(1000)
+                    .style('opacity', 0)
+                    .remove();
+                svg.selectAll("*").remove();
+                for(var i = 0; i < markers.length; i ++) {
+                    map.removeLayer(markers[i]);
+                }
+            }, 7000);
+            handleLegendType(msg);
+        } catch(err) {
+            console.log(err)
+        }
     }
 };
 
